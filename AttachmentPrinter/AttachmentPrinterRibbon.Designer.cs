@@ -86,8 +86,8 @@
 
         internal Microsoft.Office.Tools.Ribbon.RibbonTab AttachmentPrinterTab;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup PrintGroup;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton PrintButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonEditBox EmailNumberEditBox;
+        private Microsoft.Office.Tools.Ribbon.RibbonButton PrintButton;
     }
 
     partial class ThisRibbonCollection

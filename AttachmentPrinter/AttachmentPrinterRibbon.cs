@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Drawing.Printing;
 using System.IO;
 using System.Printing;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -35,7 +36,7 @@ namespace AttachmentPrinter
             MAPIFolder inbox = outlookApplication.Session.GetDefaultFolder(OlDefaultFolders.olFolderInbox);
             Items unreadItems = inbox.Items.Restrict("[Unread]=true");
 
-            MessageBox.Show(string.Format("Unread items in Inbox = {0}", unreadItems.Count));
+            LogInfo($"Scan started: unread items in Inbox = {unreadItems.Count}");
             MailItem mailItem = null;
 
             int printedCount = 0;
@@ -50,12 +51,12 @@ namespace AttachmentPrinter
                     {
                         foreach (Attachment attachment in mailItem.Attachments)
                         {
-                            MessageBox.Show(string.Format("Attachment Name: {0}", attachment.FileName));
-
                             var extension = Path.GetExtension(attachment.FileName).ToLowerInvariant();
 
                             if (extension == ".pdf" || extension == ".docx" || extension == ".doc" || extension == ".jpeg" || extension == ".gif" || extension == ".png")
                             {
+                                LogInfo($"Printing started: Sender name: {mailItem.SenderName}, Send on: {mailItem.SentOn.ToString("s")},  Attachment name: {attachment.FileName}");
+
                                 var tempFileName = mailItem.SentOn.ToString("s") + "-" + mailItem.SenderName + "-" + attachment.FileName;
                                 tempFileName = tempFileName.Replace(":", "").Replace(" ", "");
                                 var path = Directory.GetCurrentDirectory() + "\\AttachmentPrinter\\" + tempFileName;
@@ -64,6 +65,8 @@ namespace AttachmentPrinter
                                 {
                                     File.Delete(path);
                                 }
+
+                                LogInfo($"Save attachment to {path}");
                                 attachment.SaveAsFile(path);
 
 
@@ -85,9 +88,12 @@ namespace AttachmentPrinter
 
                                 printedCount++;
                                 File.Delete(path);
+
+                                LogInfo($"Printing complete: Sender name: {mailItem.SenderName}, Send on: {mailItem.SentOn.ToString("s")},  Attachment name: {attachment.FileName}");
                             }
                             else
                             {
+                                LogInfo($"Unsupported file type: Sender name: {mailItem.SenderName}, Send on: {mailItem.SentOn.ToString("s")},  Attachment name: {attachment.FileName}");
                                 unsupportedFiles.AppendLine(Environment.NewLine + $"Unsupported file type: {attachment.FileName}");
                             }
                         }
@@ -95,11 +101,14 @@ namespace AttachmentPrinter
                     }
                 }
 
-                MessageBox.Show($"🎉 Print process completed! Total attachments printed: {printedCount}" + unsupportedFiles.ToString());
+                LogInfo($"Scan completed: total attachments printed = {printedCount}");
+                MessageBox.Show($"🎉 Print process completed! Total attachments printed: {printedCount}" + Environment.NewLine + unsupportedFiles.ToString());
 
             }
             catch (System.Exception ex)
             {
+                LogException(ex);
+
                 MessageBox.Show(ex.Message + Environment.NewLine + Environment.NewLine + $"Attachments printed: {printedCount}");
             }
         }
@@ -191,6 +200,38 @@ namespace AttachmentPrinter
             if (queue.IsInError) return "Printer in error";
 
             return "Unknown printer issue";
+        }
+
+        private void LogException(System.Exception ex)
+        {
+            try
+            {
+                string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Exception: {ex}\r\n";
+                File.AppendAllText(GetLogFilePath(), logEntry);
+            }
+            catch
+            {
+                // Suppress any logging errors to avoid recursive exceptions
+            }
+        }
+
+        private void LogInfo(string message)
+        {
+            try
+            {
+                string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Info: {message}\r\n";
+                File.AppendAllText(GetLogFilePath(), logEntry);
+            }
+            catch
+            {
+                // Suppress any logging errors to avoid recursive exceptions
+            }
+        }
+
+        private string GetLogFilePath()
+        {
+            string appDir = Directory.GetCurrentDirectory();
+            return Path.Combine(appDir, $"Logs-{DateTime.Now:yyyy-MM-dd}.txt");
         }
     }
 }
